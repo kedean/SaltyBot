@@ -86,9 +86,6 @@ class SaltyBot(object):
 		while self.isBettingOpen(): #wait til betting is closed again to prevent rebetting
 			time.sleep(self.waitTime)
 
-		winnings = self.__state["p1total" if player == "player1" else "p2total"]
-		print("Potential Winnings: ${0}".format(winnings))
-
 	def wagerPercent(self, player, factor):
 		assert factor < 1 and factor > 0
 		balance = self.getBalance()
