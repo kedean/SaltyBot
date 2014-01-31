@@ -41,7 +41,10 @@ class SaltyBot(object):
 		self.waitTime = waitTime
 
 	def login(self, email, password):
-		self.__browser.open(self.mainUrl)
+		try:
+			self.__browser.open(self.mainUrl)
+		except:
+			raise BadLoginError("Unable to connect to server.")
 		r1 = self.__browser.follow_link(text_regex=r"Sign In")
 		self.__browser.select_form(nr=0)
 		self.__browser["email"] = email
@@ -55,7 +58,12 @@ class SaltyBot(object):
 		self.__connected = True
 
 	def isBettingOpen(self):
-		self.__browser.open(self.stateUrl)
+		try:
+			self.__browser.open(self.stateUrl)
+		except:
+			print("{0} was disconnected.".format(self.__email))
+			self.__connected = False
+			return True
 		self.__state = json.loads(self.__browser.response().get_data())
 		return (self.__state["status"] == "open")
 
@@ -81,8 +89,11 @@ class SaltyBot(object):
 			diff = newBalance - self.balance
 			print("{0} {1} the last bet.".format(self.__email, "won" if diff > 0 else "lost"))
 		self.balance = newBalance
-
-		self.__browser.open(self.betUrl, data)
+		try:
+			self.__browser.open(self.betUrl, data)
+		except:
+			print("{0} was disconnected.".format(self.__email))
+			self.__connected = False
 		print("{0} wagered ${1} on {2}".format(self.__email, amount, self.__state["p1name" if player == "player1" else "p2name"]))
 		
 		print("{0}'s current balance: ${1}".format(self.__email, self.balance))
