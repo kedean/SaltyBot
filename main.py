@@ -3,6 +3,7 @@ from getpass import getpass
 from argparse import ArgumentParser
 from threading import Thread
 import json
+import time
 
 def spawn(player, factor, amount, email, password, waitTime):
 	if type(waitTime) != int or waitTime < 0:
@@ -31,23 +32,22 @@ def spawn(player, factor, amount, email, password, waitTime):
 		bot.login(email=email, password=password)
 	except Exception as e:
 		print("Bad login for {0}.".format(email))
-		exit()
-
-	print("")
+		return None
 
 	botThread = Thread(target=bot.run, args=(wagerFunc, player, wager))
 	botThread.daemon = True
-	botThread.start()
 
 	return botThread
 
 if __name__ == "__main__":
+	defaultWaitTime = 10
+
 	parser = ArgumentParser()
 	parser.add_argument("--sourceFile", dest="source", type=str, help="JSON file containing player data. This will be used in addition to any command line parameters specifying another player.")
 	parser.add_argument("--player", dest="player", default=None, choices=[1, 2], type=int, help="Player number to place bets on. If none is given, sourceFile is assumed to be used.")
 	parser.add_argument("--factor, -f", dest="factor", type=int, default=0, choices=range(1, 100), help="Percent of balance to bet each round, from 1 to 100.")
 	parser.add_argument("--amount, -a", dest="amount", type=int, default=0, help="Flat amount to bet each round. Overrides percentage arguments.")
-	parser.add_argument("--waitTime", dest="waitTime", type=int, default=5, help="Time to wait between server requests. Be nice to the server!")
+	parser.add_argument("--waitTime", dest="waitTime", type=int, default=defaultWaitTime, help="Time to wait between server requests. Be nice to the server!")
 	
 	args = parser.parse_args()
 
@@ -91,6 +91,5 @@ if __name__ == "__main__":
 	if len(bots) == 0:
 		print("No bots were spawned. Check your arguments or source file.")
 	else:
-		while len(bots) > 0: #loop til we're out of bots
-			bots = [bot for bot in bots if bot.isAlive()] #if a bot has terminated, remove it from the queue
-
+		[bot.start() for bot in bots if bot is not None]
+		[bot.join() for bot in bots if bot is not None]

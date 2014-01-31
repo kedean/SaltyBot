@@ -27,6 +27,7 @@ class SaltyBot(object):
 	waitTime = 5
 	balance = None
 	__email = None
+	__connected = False
 
 	def __init__(self, mainUrl, betUrl, stateUrl, waitTime=5):
 		self.__browser = mechanize.Browser()
@@ -51,6 +52,7 @@ class SaltyBot(object):
 		if "Invalid Email or Password" in response.get_data():
 			raise BadLoginError("Invalid email or password.")
 		self.__email = email
+		self.__connected = True
 
 	def isBettingOpen(self):
 		self.__browser.open(self.stateUrl)
@@ -96,6 +98,5 @@ class SaltyBot(object):
 		self.wagerAmount(player, amount)
 
 	def run(self, func, player, wager):
-		while True:
+		while self.__connected:
 			func(player, wager)
-			time.sleep(0.01)
