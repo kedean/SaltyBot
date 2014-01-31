@@ -26,6 +26,7 @@ class SaltyBot(object):
 	__state = None
 	waitTime = 5
 	balance = None
+	__email = None
 
 	def __init__(self, mainUrl, betUrl, stateUrl, waitTime=5):
 		self.__browser = mechanize.Browser()
@@ -49,6 +50,7 @@ class SaltyBot(object):
 		response = self.__browser.response()
 		if "Invalid Email or Password" in response.get_data():
 			raise BadLoginError("Invalid email or password.")
+		self.__email = email
 
 	def isBettingOpen(self):
 		self.__browser.open(self.stateUrl)
@@ -67,7 +69,7 @@ class SaltyBot(object):
 			"wager":amount
 		})
 
-		print("Waiting for bets to open...")
+		print("{0} is waiting for bets to open...".format(self.__email))
 
 		while not self.isBettingOpen(): #loop til the betting is open again
 			time.sleep(self.waitTime)
@@ -75,13 +77,13 @@ class SaltyBot(object):
 		newBalance = self.getBalance()
 		if self.balance is not None:
 			diff = newBalance - self.balance
-			print("You {0} the last bet.".format("won" if diff > 0 else "lost"))
+			print("{0} {1} the last bet.".format(self.__email, "won" if diff > 0 else "lost"))
 		self.balance = newBalance
 
 		self.__browser.open(self.betUrl, data)
-		print("Wagered ${0} on {1}".format(amount, self.__state["p1name" if player == "player1" else "p2name"]))
+		print("{0} wagered ${1} on {2}".format(self.__email, amount, self.__state["p1name" if player == "player1" else "p2name"]))
 		
-		print("Current Balance: ${0}".format(self.balance))
+		print("{0}'s current balance: ${1}".format(self.__email, self.balance))
 
 		while self.isBettingOpen(): #wait til betting is closed again to prevent rebetting
 			time.sleep(self.waitTime)
@@ -92,3 +94,8 @@ class SaltyBot(object):
 		amount = int(balance * factor)
 
 		self.wagerAmount(player, amount)
+
+	def run(self, func, player, wager):
+		while True:
+			func(player, wager)
+			time.sleep(0.01)
