@@ -1,3 +1,4 @@
+from __future__ import print_function
 import re
 import time
 import mechanize
@@ -6,14 +7,14 @@ from urllib import urlencode
 import json
 
 class PrettifyHandler(mechanize.BaseHandler):
-    def http_response(self, request, response):
-        if not hasattr(response, "seek"):
-            response = mechanize.response_seek_wrapper(response)
-        # only use BeautifulSoup if response is html
-        if response.info().dict.has_key('content-type') and ('html' in response.info().dict['content-type']):
-            soup = BeautifulSoup(response.get_data())
-            response.set_data(soup.prettify())
-        return response
+		def http_response(self, request, response):
+				if not hasattr(response, "seek"):
+						response = mechanize.response_seek_wrapper(response)
+				# only use BeautifulSoup if response is html
+				if response.info().dict.has_key('content-type') and ('html' in response.info().dict['content-type']):
+						soup = BeautifulSoup(response.get_data())
+						response.set_data(soup.prettify())
+				return response
 
 class BadLoginError(Exception):
 	def __init__(self, value):
@@ -26,6 +27,7 @@ class SaltyBot(object):
 	__state = None
 	waitTime = 5
 	balance = None
+	messagingFunc = print
 	__email = None
 	__connected = False
 
@@ -35,10 +37,7 @@ class SaltyBot(object):
 		self.__browser.set_handle_robots(False)
 		self.__browser.addheaders = [('User-agent', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/32.0.1700.77 Safari/537.36')]
 
-		self.mainUrl = mainUrl
-		self.betUrl = betUrl
-		self.stateUrl = stateUrl
-		self.waitTime = waitTime
+		self.mainUrl, self.betUrl, self.stateUrl, self.waitTime = mainUrl, betUrl, stateUrl, waitTime
 
 	def login(self, email, password):
 		try:
@@ -61,7 +60,7 @@ class SaltyBot(object):
 		try:
 			self.__browser.open(self.stateUrl)
 		except:
-			print("{0} was disconnected.".format(self.__email))
+			self.messagingFunc("{0} was disconnected.".format(self.__email))
 			self.__connected = False
 			return True
 		self.__state = json.loads(self.__browser.response().get_data())
@@ -79,7 +78,7 @@ class SaltyBot(object):
 			"wager":amount
 		})
 
-		print("{0} is waiting for bets to open...".format(self.__email))
+		self.messagingFunc("{0} is waiting for bets to open...".format(self.__email))
 
 		while not self.isBettingOpen(): #loop til the betting is open again
 			time.sleep(self.waitTime)
@@ -87,16 +86,16 @@ class SaltyBot(object):
 		newBalance = self.getBalance()
 		if self.balance is not None:
 			diff = newBalance - self.balance
-			print("{0} {1} the last bet.".format(self.__email, "won" if diff > 0 else "lost"))
+			self.messagingFunc("{0} {1} the last bet.".format(self.__email, "won" if diff > 0 else "lost"))
 		self.balance = newBalance
 		try:
 			self.__browser.open(self.betUrl, data)
 		except:
-			print("{0} was disconnected.".format(self.__email))
+			self.messagingFunc("{0} was disconnected.".format(self.__email))
 			self.__connected = False
-		print("{0} wagered ${1} on {2}".format(self.__email, amount, self.__state["p1name" if player == "player1" else "p2name"]))
-		
-		print("{0}'s current balance: ${1}".format(self.__email, self.balance))
+		self.messagingFunc("{0} wagered ${1} on {2}".format(self.__email, amount, self.__state["p1name" if player == "player1" else "p2name"]))
+
+		self.messagingFunc("{0}'s current balance: ${1}".format(self.__email, self.balance))
 
 		while self.isBettingOpen(): #wait til betting is closed again to prevent rebetting
 			time.sleep(self.waitTime)
@@ -107,6 +106,9 @@ class SaltyBot(object):
 		amount = int(balance * factor)
 
 		self.wagerAmount(player, amount)
+
+	def disconnect(self):
+		self.__connected = False
 
 	def run(self, func, player, wager):
 		while self.__connected:

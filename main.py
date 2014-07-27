@@ -4,40 +4,7 @@ from argparse import ArgumentParser
 from threading import Thread
 import json
 import time
-
-def spawn(player, factor, amount, email, password, waitTime):
-	if type(waitTime) != int or waitTime < 0:
-		print("Negative wait times are not possible.")
-		exit()
-
-	bot = SaltyBot(mainUrl="http://www.saltybet.com", 
-					betUrl="http://www.saltybet.com/ajax_place_bet.php",
-					stateUrl="http://www.saltybet.com/state.json",
-					waitTime=waitTime)
-
-	wager = None
-	wagerFunc = None
-
-	if amount > 0:
-		wagerFunc = bot.wagerAmount
-		wager = amount
-	elif factor > 0 and factor < 100:
-		wagerFunc = bot.wagerPercent
-		wager = factor / 100.0
-	else:
-		print("Please use either a positive amount or a factor between 1 and 100.")
-		exit()
-
-	try:
-		bot.login(email=email, password=password)
-	except Exception as e:
-		print("Bad login for {0}.".format(email))
-		return None
-
-	botThread = Thread(target=bot.run, args=(wagerFunc, player, wager))
-	botThread.daemon = True
-
-	return botThread
+from Commander import Commander
 
 if __name__ == "__main__":
 	defaultWaitTime = 10
@@ -48,21 +15,23 @@ if __name__ == "__main__":
 	parser.add_argument("--factor, -f", dest="factor", type=int, default=0, choices=range(1, 100), help="Percent of balance to bet each round, from 1 to 100.")
 	parser.add_argument("--amount, -a", dest="amount", type=int, default=0, help="Flat amount to bet each round. Overrides percentage arguments.")
 	parser.add_argument("--waitTime", dest="waitTime", type=int, default=defaultWaitTime, help="Time to wait between server requests. Be nice to the server!")
-	
+
 	args = parser.parse_args()
 
-	bots = []
+	commander = Commander()
 
 	if args.player is not None: #spawn a single player if one is specified
 		player = "player1" if args.player == 1 else "player2"
 		factor = args.factor
 		amount = args.amount
 		waitTime = args.waitTime
-
-		email = raw_input("Email Address: ")
-		password = getpass("Password: ")
-
-		bots.append(spawn(player, factor, amount, email, password, waitTime))
+		try:
+			email = raw_input("Email Address: ")
+		except NameError:
+			email = input("Email Address: ")
+		finally:
+			password = getpass("Password: ")
+			commander.addBot(player, factor, amount, email, password, waitTime)
 
 	if args.source:
 		with open(args.source, "r") as playerHandle:
@@ -86,10 +55,9 @@ if __name__ == "__main__":
 				if "waitTime" not in playerData:
 					playerData["waitTime"] = 5
 
-				bots.append(spawn(player, playerData["factor"], playerData["amount"], playerData["email"], playerData["password"], playerData["waitTime"]))
+				commander.addBot(player, playerData["factor"], playerData["amount"], playerData["email"], playerData["password"], playerData["waitTime"])
 
-	if len(bots) == 0:
+	if commander.numSlaves == 0:
 		print("No bots were spawned. Check your arguments or source file.")
 	else:
-		[bot.start() for bot in bots if bot is not None]
-		[bot.join() for bot in bots if bot is not None]
+		commander.run()
