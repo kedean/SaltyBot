@@ -60,13 +60,3 @@ class Commander(object):
     botThread = Thread(target=bot.run, args=(wagerFunc, player, wager))
     botThread.daemon = True
     self.slaveThreads.append(botThread)
-
-  """
-  @staticmethod
-  def run(sourcingClass, slaves):
-    commandSource = sourcingClass()
-    for command in commandSource.commands():
-      if command == CSI.QUIT_COMMAND:
-        [slave.disconnect() for slave in slaves]
-        return
-"""
