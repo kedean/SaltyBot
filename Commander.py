@@ -31,10 +31,7 @@ class Commander(object):
       print("Negative wait times are not possible.")
       exit()
 
-    bot = SaltyBot(mainUrl="http://www.saltybet.com",
-            betUrl="http://www.saltybet.com/ajax_place_bet.php",
-            stateUrl="http://www.saltybet.com/state.json",
-            waitTime=waitTime)
+    bot = SaltyBot(waitTime=waitTime)
 
     wager = None
     wagerFunc = None
@@ -49,11 +46,7 @@ class Commander(object):
       print("Please use either a positive amount or a factor between 1 and 100.")
       exit()
 
-    try:
-      bot.login(email=email, password=password)
-    except Exception as e:
-      print("Bad login for {0}.".format(email))
-      return None
+    bot.login(email=email, password=password)
 
     bot.messagingFunc = self.messages.put
     self.slaves.append(bot)

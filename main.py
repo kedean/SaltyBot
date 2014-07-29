@@ -1,7 +1,5 @@
-from SaltyBot import SaltyBot
 from getpass import getpass
 from argparse import ArgumentParser
-from threading import Thread
 import json
 import time
 from Commander import Commander
