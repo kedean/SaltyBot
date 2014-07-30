@@ -1,20 +1,9 @@
 from __future__ import print_function
 import re
 import time
-import mechanize
 from BeautifulSoup import *
-from urllib import urlencode
 import json
-
-class PrettifyHandler(mechanize.BaseHandler):
-    def http_response(self, request, response):
-        if not hasattr(response, "seek"):
-            response = mechanize.response_seek_wrapper(response)
-        # only use BeautifulSoup if response is html
-        if response.info().dict.has_key('content-type') and ('html' in response.info().dict['content-type']):
-            soup = BeautifulSoup(response.get_data())
-            response.set_data(soup.prettify())
-        return response
+import requests
 
 class BadLoginError(Exception):
   def __init__(self, value):
@@ -40,31 +29,25 @@ class SaltyInterface(object):
   __requestCache = [None, None]
 
   def __init__(self):
-    self.__browser = mechanize.Browser()
-    self.__browser.add_handler(PrettifyHandler())
-    self.__browser.set_handle_robots(False)
-    self.__browser.addheaders = [('User-agent', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/32.0.1700.77 Safari/537.36')]
+    self.session = requests.session()
+    self.session.headers.update({'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/32.0.1700.77 Safari/537.36'})
 
   def connect(self, email, password):
     try:
-      self.__browser.open(self.MAIN_URL)
+      self.session.get(self.MAIN_URL)
     except:
       raise BettingConnectionError("Unable to connect to server.")
-    #r1 = self.__browser.follow_link(text_regex=r"Sign In")
-    self.__browser.open(self.MAIN_URL + "/authenticate?signin=1")
-    #self.__browser.select_form(nr=0)
-    #self.__browser["email"] = email
-    #self.__browser["pword"] = password
-    #self.__browser.submit()
-    self.__browser.open(self.MAIN_URL + "/authenticate?signin=1", urlencode({"email":email, "pword":password}))
+    self.session.get(self.MAIN_URL + "/authenticate?signin=1")
+    r = self.session.post(self.MAIN_URL + "/authenticate?signin=1", data={"email":email, "pword":password, "authenticate":"signin"})
 
-    response = self.__browser.response()
-    if "Invalid Email or Password" in response.get_data():
+    response = r.text
+
+    if "Invalid Email or Password" in response:
       raise BadLoginError("Invalid email or password.")
 
     self.__connected = True
 
-    return response
+    return r
 
   def disconnect(self):
     self.__connected = False
@@ -90,14 +73,13 @@ class SaltyInterface(object):
     return self.getState()["p2name"]
 
   def wager(self, player, amount):
-    data = urlencode({
-      "radio":"on",
-      "selectedplayer":player,
-      "wager":amount
-    })
     try:
-      self.__browser.open(self.BET_URL, data)
-      return self.__browser.response().get_data()
+      response = self.session.post(self.BET_URL, data=json.dumps({
+        "radio":"on",
+        "selectedplayer":player,
+        "wager":amount
+      }))
+      return response.text
     except:
       self.disconnect()
       raise BettingConnectionError("A connection was lost!")
@@ -106,8 +88,8 @@ class SaltyInterface(object):
     if self.__requestCache[cacheIndex] is not None and (time.time() - self.__requestTimes[cacheIndex] < self.waitTimeSeconds):
       return self.__requestCache[cacheIndex]
     try:
-      self.__browser.open(self.__requestURLs[cacheIndex])
-      self.__requestCache[cacheIndex] = self.__browser.response().get_data()
+      response = self.session.get(self.__requestURLs[cacheIndex])
+      self.__requestCache[cacheIndex] = response.text
     except:
       self.disconnect()
       raise BettingConnectionError("A connection was lost!")

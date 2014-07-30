@@ -1,9 +1,6 @@
 from __future__ import print_function
 import re
 import time
-import mechanize
-from BeautifulSoup import *
-from urllib import urlencode
 import json
 import SaltyInterface
 
