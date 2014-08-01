@@ -76,7 +76,7 @@ if __name__ == "__main__":
       time.sleep(wait)
 
     winner = interface.status
-    winnerName = names[0] if winner == 1" else names[1]
+    winnerName = names[0] if winner == "1" else names[1]
 
     averager.close(winnerName)
     winTotaler.close(winnerName)
