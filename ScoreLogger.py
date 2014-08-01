@@ -1,7 +1,7 @@
 import SaltyInterface
 import time
 
-class salty_averager(object):
+class Averager(object):
   support = {}
   matchCounts = {}
   #wagers = []
@@ -28,6 +28,22 @@ class salty_averager(object):
   def close(self, winner):
     pass
 
+class PriorWinsTotaler(object):
+  winCounts = {}
+
+  def open(self, name1, name2, total1, total2):
+    currentSupport = [self.winCounts.get(name1, 0), self.winCounts.get(name2, 0)]
+
+    if currentSupport[0] > currentSupport[1]:
+      return "1"
+    elif currentSupport[0] < currentSupport[1]:
+      return "2"
+    else:
+      return "3"
+
+  def close(self, winnerName):
+    self.winCounts[winnerName] = self.winCounts.get(winnerName, 0) + 1
+
 if __name__ == "__main__":
   interface = SaltyInterface.SaltyInterface()
   interface.connect("bot123@mailinator.com", "botbot")
@@ -35,10 +51,11 @@ if __name__ == "__main__":
 
   wait = 2
 
-  averager = salty_averager()
-  #winners = []
+  averager = Averager()
+  winTotaler = PriorWinsTotaler()
+
   with open("logging.txt", "w") as log:
-    log.write("Winner, AverageSupported\n")
+    log.write("Winner, AverageSupported, TotalerSupported\n")
   rounds = 0
   while True:
     rounds += 1
@@ -51,16 +68,21 @@ if __name__ == "__main__":
     names = [state["p1name"], state["p2name"]]
     newSupport = [int(state["p1total"].replace(",","")), int(state["p2total"].replace(",", ""))]
 
-    supporting = averager.open(names[0], names[1], newSupport[0], newSupport[1])
+    supporting = (averager.open(names[0], names[1], newSupport[0], newSupport[1]),
+                  winTotaler.open(names[0], names[1], newSupport[0], newSupport[1])
+                  )
 
     while interface.status == "locked":
       time.sleep(wait)
 
     winner = interface.status
-    averager.close(int(winner))
+    winnerName = names[0] if winner == 1" else names[1]
+
+    averager.close(winnerName)
+    winTotaler.close(winnerName)
 
     with open("logging.txt", "a") as log:
-      log.write("{0}, {1}\n".format(winner, supporting))
+      log.write("{0}, {1}, {2}\n".format(winner, supporting[0], supporting[1]))
 
 
   #print zip(winners, averager.wagers)
